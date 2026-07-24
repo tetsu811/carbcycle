@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
     '數字取整數。若名稱含數量（如 x2、兩顆、13顆），請按總量估計。食物名稱：' + name;
 
   const r = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' +
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' +
       process.env.GEMINI_API_KEY,
     {
       method: 'POST',
