@@ -50,8 +50,8 @@
   .kcal-big .n.over{color:var(--no);}
   .kcal-big .s{font-size:13px; color:var(--muted);}
   .addgrid{display:grid; grid-template-columns:1fr; gap:8px;}
-  .macro3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
-  .macro3 label{font-size:11px; color:var(--muted); display:block; margin-bottom:4px; text-align:center;}
+  .macro4{display:grid; grid-template-columns:1fr 1fr 1fr 0.8fr; gap:8px;}
+  .macro4 label{font-size:11px; color:var(--muted); display:block; margin-bottom:4px; text-align:center;}
   .addbtn{width:100%; padding:12px; border-radius:12px; border:none; background:var(--kcal); color:#0b2a1e; font-size:16px; font-weight:700; cursor:pointer; margin-top:2px; transition:.15s;}
   .addbtn:active{transform:scale(.98);}
   .est{font-size:13px; color:var(--muted); text-align:center; min-height:18px;}
@@ -156,10 +156,11 @@
         </div>
         <button class="aibtn" id="aiBtn" onclick="aiEstimate()">✨ AI</button>
       </div>
-      <div class="macro3">
+      <div class="macro4">
         <div><label style="color:var(--carb)">碳水 (g)</label><input type="number" id="fCarb" inputmode="decimal" placeholder="0" oninput="updateEst()"></div>
         <div><label style="color:var(--fat)">脂肪 (g)</label><input type="number" id="fFat" inputmode="decimal" placeholder="0" oninput="updateEst()"></div>
         <div><label style="color:var(--protein)">蛋白質 (g)</label><input type="number" id="fProt" inputmode="decimal" placeholder="0" oninput="updateEst()"></div>
+        <div><label>數量 (×)</label><input type="number" id="fQty" inputmode="decimal" placeholder="1" oninput="updateEst()"></div>
       </div>
       <div class="est" id="estKcal"></div>
       <button class="addbtn" onclick="addFood()">＋ 加入</button>
@@ -364,18 +365,21 @@ function shiftDate(n){
 function setType(t){ getDay(curDate).type = t; markDirty('day:'+curDate); render(); }
 
 // ===== add food =====
+function getQty(){ const q = num(fQty.value); return q>0 ? q : 1; }
 function updateEst(){
-  const k = kcalOf(num(fCarb.value), num(fFat.value), num(fProt.value));
-  estKcal.textContent = k>0 ? '≈ '+k+' 大卡' : '';
+  const q = getQty();
+  const k = kcalOf(num(fCarb.value)*q, num(fFat.value)*q, num(fProt.value)*q);
+  estKcal.textContent = k>0 ? '≈ '+k+' 大卡'+(q!==1?'（×'+q+'）':'') : '';
 }
 function addFood(){
   const n = fName.value.trim();
   const c=num(fCarb.value), f=num(fFat.value), p=num(fProt.value);
+  const q = getQty();
   if(!n){ fName.focus(); return; }
-  getDay(curDate).foods.push({n,c,f,p});
+  getDay(curDate).foods.push({n: q!==1 ? n+' ×'+q : n, c:c*q, f:f*q, p:p*q});
   markDirty('day:'+curDate);
   if(c||f||p){ store.lib[n] = {c,f,p}; markDirty('lib'); }
-  fName.value=fCarb.value=fFat.value=fProt.value='';
+  fName.value=fCarb.value=fFat.value=fProt.value=fQty.value='';
   estKcal.textContent=''; hideAC();
   render();
 }
