@@ -55,6 +55,8 @@
   .addbtn{width:100%; padding:12px; border-radius:12px; border:none; background:var(--kcal); color:#0b2a1e; font-size:16px; font-weight:700; cursor:pointer; margin-top:2px; transition:.15s;}
   .addbtn:active{transform:scale(.98);}
   .est{font-size:13px; color:var(--muted); text-align:center; min-height:18px;}
+  .aibtn{background:rgba(93,211,158,.14); border:1px solid var(--kcal); color:var(--kcal); border-radius:10px; padding:10px 12px; font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap; transition:.15s;}
+  .aibtn:disabled{opacity:.5;}
   .food{display:flex; align-items:center; gap:8px; padding:10px 2px; border-bottom:1px solid var(--border);}
   .food:last-child{border-bottom:none;}
   .food .name{flex:1; font-size:15px;}
@@ -147,9 +149,12 @@
   <div class="card">
     <h2>新增食物</h2>
     <div class="addgrid">
-      <div class="autolist">
-        <input type="text" id="fName" placeholder="食物名稱（輸入可帶出吃過的）" autocomplete="off" oninput="showAC()" onfocus="showAC()">
-        <div class="ac" id="acBox" style="display:none"></div>
+      <div class="row">
+        <div class="autolist" style="flex:1">
+          <input type="text" id="fName" placeholder="食物名稱（輸入可帶出吃過的）" autocomplete="off" oninput="showAC()" onfocus="showAC()">
+          <div class="ac" id="acBox" style="display:none"></div>
+        </div>
+        <button class="aibtn" id="aiBtn" onclick="aiEstimate()">✨ AI</button>
       </div>
       <div class="macro3">
         <div><label style="color:var(--carb)">碳水 (g)</label><input type="number" id="fCarb" inputmode="decimal" placeholder="0" oninput="updateEst()"></div>
@@ -375,6 +380,32 @@ function addFood(){
   render();
 }
 function delFood(i){ getDay(curDate).foods.splice(i,1); markDirty('day:'+curDate); render(); }
+
+// AI 估算營養素
+async function aiEstimate(){
+  const n = fName.value.trim();
+  if(!n){ fName.focus(); return; }
+  const btn = document.getElementById('aiBtn');
+  btn.disabled = true; btn.textContent = '⋯';
+  estKcal.textContent = 'AI 估算中…';
+  try{
+    const {data:{session}} = await sb.auth.getSession();
+    if(!session) throw new Error('no session');
+    const r = await fetch('/api/food', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body: JSON.stringify({name:n}),
+    });
+    if(!r.ok) throw new Error('api');
+    const d = await r.json();
+    fCarb.value = d.c; fFat.value = d.f; fProt.value = d.p;
+    updateEst();
+    estKcal.textContent = '≈ '+kcalOf(d.c,d.f,d.p)+' 大卡'+(d.serving?'（'+d.serving+'，AI 估算可修改）':'（AI 估算可修改）');
+  }catch(e){
+    estKcal.textContent = 'AI 估算失敗，請手動輸入或再試一次';
+  }
+  btn.disabled = false; btn.textContent = '✨ AI';
+}
 
 // autocomplete
 function showAC(){
