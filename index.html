@@ -74,6 +74,15 @@
   .tag-high{background:rgba(245,166,35,.18); color:var(--high);}
   .hist .hk{margin-left:auto; font-weight:600;}
   .hist .ok{color:var(--kcal);} .hist .ng{color:var(--no);}
+  .legend{display:flex; gap:16px; justify-content:center; font-size:12px; color:var(--muted); margin-bottom:12px;}
+  .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px;}
+  .chart{display:flex; gap:8px; align-items:flex-end;}
+  .c7{flex:1; min-width:0; text-align:center;}
+  .c7 .bars{height:140px; display:flex; flex-direction:column; justify-content:flex-end;}
+  .c7 .seg{width:100%; border-radius:2px; margin-top:1px; min-height:0;}
+  .c7 .ct{font-size:10px; color:var(--muted); margin-bottom:3px;}
+  .c7 .cl{font-size:10px; color:var(--muted); margin-top:6px; white-space:nowrap;}
+  .c7.today .cl{color:var(--text); font-weight:700;}
   .autolist{position:relative;}
   .ac{position:absolute; top:100%; left:0; right:0; background:var(--card2); border:1px solid var(--border); border-radius:10px; margin-top:4px; z-index:20; max-height:190px; overflow:auto;}
   .ac div{padding:10px 12px; font-size:14px; cursor:pointer; display:flex; justify-content:space-between; border-bottom:1px solid var(--border);}
@@ -170,6 +179,16 @@
   <div class="card">
     <h2>今日紀錄</h2>
     <div id="foodList"></div>
+  </div>
+
+  <div class="card">
+    <h2>近 7 天熱量組成</h2>
+    <div class="legend">
+      <span><i style="background:var(--carb)"></i>Carbs</span>
+      <span><i style="background:var(--fat)"></i>Fat</span>
+      <span><i style="background:var(--protein)"></i>Protein</span>
+    </div>
+    <div class="chart" id="chart7"></div>
   </div>
 
   <div class="card">
@@ -473,6 +492,36 @@ function render(){
       <button class="del" onclick="delFood(${i})">✕</button>
     </div>`).join('')
     : '<div class="empty">尚未記錄，從上方新增</div>';
+
+  // 7-day macro calorie chart
+  const days7 = [];
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    days7.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+  }
+  let maxK = 1;
+  const chartRows = days7.map(ds=>{
+    const dd = store.days[ds];
+    let c2=0,f2=0,p2=0;
+    if(dd) dd.foods.forEach(x=>{c2+=x.c; f2+=x.f; p2+=x.p;});
+    const ck=Math.round(c2*4), fk=Math.round(f2*9), pk=Math.round(p2*4);
+    const tot=ck+fk+pk;
+    maxK = Math.max(maxK, tot);
+    return {ds, ck, fk, pk, tot};
+  });
+  chart7.innerHTML = chartRows.map(r=>{
+    const h = v => (v/maxK*140).toFixed(1);
+    const wd = '日一二三四五六'[new Date(r.ds+'T12:00:00').getDay()];
+    return `<div class="c7 ${r.ds===todayStr()?'today':''}" onclick="curDate='${r.ds}';render();window.scrollTo(0,0)" style="cursor:pointer">
+      <div class="bars">
+        <div class="ct">${r.tot||''}</div>
+        <div class="seg" style="height:${h(r.pk)}px; background:var(--protein)"></div>
+        <div class="seg" style="height:${h(r.fk)}px; background:var(--fat)"></div>
+        <div class="seg" style="height:${h(r.ck)}px; background:var(--carb)"></div>
+      </div>
+      <div class="cl">${r.ds.slice(5).replace('-','/')}（${wd}）</div>
+    </div>`;
+  }).join('');
 
   const dates = [];
   for(let i=0;i<14;i++){
